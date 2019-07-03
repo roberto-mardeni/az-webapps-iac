@@ -1,0 +1,135 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vNetName": {
+      "type": "string",
+      "defaultValue":  "workshopVnet"
+    },
+    "AdminUserName": {
+      "type": "string",
+      "defaultValue":  "sysadmin"
+    },
+    "AdminUserPassword": {
+      "type": "securestring",
+      "defaultValue":  "Password$123"
+    },
+    "WebSrvName": {
+      "type": "string",
+      "defaultValue":  "vmweb01"
+    },
+    "SqlSrvName": {
+      "type": "string",
+      "defaultValue": "vmsql01"
+    },
+    "dbLoginName": {
+      "type": "string",
+      "defaultValue": "workshopServiceAcc"
+    },
+    "dbUserName": {
+      "type": "string",
+      "defaultValue": "workshopServiceAcc"
+    },
+    "dbUserPassword": {
+      "type": "securestring",
+      "defaultValue": "Password$123"
+    },
+    "databaseName": {
+      "type": "string",
+      "defaultValue": "partsUnlimitedDB"
+    },
+    "dbUserDatabaseRole": {
+      "type": "string",
+      "defaultValue": "db_owner"
+    },
+    "sqlSchemaScriptUrl": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "sqlDataScriptUrl": {
+      "type": "string",
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "baseUri": "[deployment().properties.templateLink.uri]",
+    "templateFolder": "NestedTemplates",
+    "vnetTemplateUrl": "[uri(variables('baseUri'), concat('/', variables('templateFolder'), '/vNet.json'))]",
+    "webServerTemplateUrl": "[uri(variables('baseUri'), concat('/', variables('templateFolder'), '/WebSrv.json'))]",
+    "sqlServerTemplateUrl": "[uri(variables('baseUri'), concat('/', variables('templateFolder'), '/SqlSrv.json'))]",
+    "srvStorageType": "Standard_LRS",
+    "WebSrvOSVersion": "2016-Datacenter"
+  },
+  "resources": [
+    {
+      "name": "vNetDeploy",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-09-01",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('vnetTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "vNetName": { "value": "[parameters('vNetName')]" }
+        }
+      }
+    },
+    {
+      "name": "WebSrv",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-09-01",
+      "dependsOn": [ "vNetDeploy" ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('webServerTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "WebSrvStorageType": { "value": "[variables('srvStorageType')]" },
+          "WebSrvName": { "value": "[parameters('WebSrvName')]" },
+          "WebSrvAdminUserName": { "value": "[parameters('AdminUserName')]" },
+          "WebSrvAdminPassword": { "value": "[parameters('AdminUserPassword')]" },
+          "WebSrvWindowsOSVersion": { "value": "[variables('WebSrvOSVersion')]" },
+          "virtualNetworkName": { "value": "[parameters('vNetName')]" },
+          "virtualNetworkResourceGroup": { "value": "[resourceGroup().name]" },
+          "_artifactsLocation": { "value": "[variables('baseUri')]" }
+        }
+      }
+    },
+    {
+      "name": "SqlSrv",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2016-09-01",
+      "dependsOn": [ "vNetDeploy" ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('sqlServerTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualMachineName": { "value": "[parameters('SqlSrvName')]" },
+          "adminUsername": { "value": "[parameters('AdminUserName')]" },
+          "virtualNetworkName": { "value": "[parameters('vNetName')]" },
+          "virtualNetworkResourceGroup": { "value": "[resourceGroup().name]" },
+          "adminPassword": { "value": "[parameters('AdminUserPassword')]" },
+          "SqlSrvStorageType": { "value": "[variables('srvStorageType')]" },
+          "dbLoginName": { "value": "[parameters('dbLoginName')]" },
+          "dbUserName": { "value": "[parameters('dbUserName')]" },
+          "dbUserPassword": { "value": "[parameters('dbUserPassword')]" },
+          "databaseName": { "value": "[parameters('databaseName')]" },
+          "dbUserDatabaseRole": { "value": "[parameters('dbUserDatabaseRole')]" },
+          "sqlSchemaScript": { "value": "[parameters('sqlSchemaScriptUrl')]" },
+          "sqlDataScript": { "value": "[parameters('sqlDataScriptUrl')]" },
+          "_artifactsLocation": { "value": "[variables('baseUri')]" }
+        }
+      }
+    }
+  ],
+  "outputs": {
+  }
+}
